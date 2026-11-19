@@ -1,145 +1,191 @@
-# 📘 NCERT RAG Bot
+# NCERT RAG AI Tutor
 
-An **AI Tutor for Class 10 NCERT books** powered by a Retrieval-Augmented Generation (RAG) pipeline.  
-You can upload or use the included NCERT PDFs, and the bot will answer questions conversationally.
+An AI-powered conversational tutor designed to help Class 10 CBSE students understand NCERT Science concepts through Retrieval-Augmented Generation (RAG), semantic search, and locally hosted Large Language Models.
 
----
+## Overview
 
-## 🚀 Features
-- Extracts text from NCERT PDF and splits into smart chunks.
-- Embeds chunks into a **Chroma Vector Database**.
-- Uses **Ollama** as the local LLM backend (default: `phi3-fast`).
-- Provides a **Streamlit UI** for chat interaction.
-- Conversational memory: remembers your questions & context.
+NCERT RAG AI Tutor is an educational chatbot that retrieves relevant information from NCERT study material and uses a locally running language model to generate contextual explanations.
 
----
+The project combines document processing, vector embeddings, semantic retrieval, and conversational AI to create an interactive learning experience.
 
-## 📂 Project Structure
+## Features
+
+- **Retrieval-Augmented Generation:** Generates answers using relevant NCERT study material.
+- **Semantic Search:** Retrieves relevant text chunks using vector embeddings.
+- **Conversational Interface:** Supports follow-up questions and contextual conversations.
+- **Local LLM Integration:** Uses Ollama to run Phi-3 locally.
+- **Vector Database:** Uses ChromaDB to store and retrieve document embeddings.
+- **Text Chunking:** Splits study material into manageable chunks for efficient retrieval.
+- **Interactive UI:** Provides a chatbot interface using Streamlit.
+- **Local Processing:** Runs inference locally without requiring a paid LLM API.
+
+## Technology Stack
+
+| Component | Technology |
+|---|---|
+| Programming Language | Python |
+| Frontend | Streamlit |
+| LLM Framework | LangChain |
+| Language Model | Phi-3 |
+| Model Runtime | Ollama |
+| Embedding Model | nomic-embed-text |
+| Vector Database | ChromaDB |
+| Retrieval Architecture | RAG |
+
+## System Architecture
+
+```mermaid
+flowchart TD
+    A[NCERT Study Material] --> B[Text Processing]
+    B --> C[Text Chunking]
+    C --> D[Embedding Generation]
+    D --> E[ChromaDB Vector Database]
+
+    F[Student Query] --> G[Streamlit Interface]
+    G --> H[LangChain RAG Pipeline]
+    H --> I[Semantic Retrieval]
+    E --> I
+    I --> J[Relevant Context]
+    J --> K[Phi-3 via Ollama]
+    K --> L[Generated Response]
+    L --> G
 ```
-ncert-rag-bot/
-│── data_ingestion.py # Extracts text from PDF and saves as ncert_text.txt
-│── chunking.py # Splits extracted text into overlapping chunks
-│── rag_pipeline.py # Builds the RAG QA pipeline
-│── streamlit_app.py # Streamlit UI for chatting
-│── ncert_science_class10.pdf # Example NCERT PDF
-│── jesc106 2.pdf # Another example PDF
-│── Modelfile # Ollama model config (optional)
-│── README.md # This file
-│── .gitignore
-│── venv/ # Virtual environment (not pushed to GitHub)
-│── ncert_db/ # Chroma database (ignored in Git)
-│── ncert_text.txt # Extracted text (ignored in Git)
+
+## Project Structure
+
+```text
+ncert-rag-ai-tutor/
+│
+├── streamlit_app.py       # Streamlit chatbot interface
+├── rag_pipeline.py        # RAG pipeline and conversational chain
+├── chunking.py            # Text chunking functionality
+├── data_ingestion.py      # Document ingestion and processing
+├── ncert_text.txt         # NCERT source text
+├── Modelfile              # Custom Ollama model configuration
+├── requirements.txt       # Python dependencies
+├── README.md              # Project documentation
+└── .gitignore             # Git ignored files
 ```
 
+The ChromaDB vector database is generated locally and is not included in the repository.
 
----
+## Getting Started
 
-## 🛠️ Setup Guide
+### Prerequisites
 
-Follow these steps sequentially:
+- Python 3.11 or later
+- Ollama
+- Git
 
-### 1️⃣ Clone the Repository
+### 1. Clone the repository
 
+```bash
+git clone https://github.com/deva2905/ncert-rag-ai-tutor.git
+cd ncert-rag-ai-tutor
 ```
-git clone https://github.com/haris-collab/ncert-rag-bot.git
-cd ncert-rag-bot
-```
 
+### 2. Create a virtual environment
 
-2️⃣ Create & Activate Virtual Environment
-```
+```bash
 python3 -m venv venv
-```
-```
-source venv/bin/activate   # On macOS/Linux
-```
-```
-venv\Scripts\activate      # On Windows
+source venv/bin/activate
 ```
 
-3️⃣ Install Dependencies
-```
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-4️⃣ Install Ollama
-Ollama is required to run local LLMs like phi3-fast.
+### 4. Install and start Ollama
 
-macOS:
-```
-brew install ollama
-```
-Linux:
-```
-curl -fsSL https://ollama.com/install.sh | sh
-```
-Windows:
-Download installer from ```https://ollama.com/download.```
+Download Ollama from:
 
-Verify installation:
-```
-ollama --version
+https://ollama.com/
+
+Start the Ollama service.
+
+### 5. Download the required models
+
+```bash
+ollama pull nomic-embed-text
+ollama pull phi3:latest
 ```
 
+### 6. Create the custom model
 
-5️⃣ Pull the Model
-This project uses phi3-fast as the default model.
+```bash
+ollama create phi3-fast -f Modelfile
 ```
-ollama pull phi3-fast
-```
-You can change this later inside rag_pipeline.py.
 
+### 7. Generate the vector database
 
+Run the following Python commands from the project directory:
 
-6️⃣ Extract Text from PDF
-By default, the repo includes:
-ncert_science_class10.pdf
-jesc106 2.pdf
-Run text extraction:
+```bash
+python
 ```
-python data_ingestion.py
-```
-This creates a ncert_text.txt file.
 
+Then execute:
 
-🚨Make sure ollama application is running in the background🚨
-Do this before running your streamlit_app.py:
-Start Ollama server (in a separate terminal):
-```
-ollama serve
-```
-On macOS & Linux, Ollama usually runs automatically as a background service after installation.
-If not, running this will start it.
+```python
+from chunking import create_chunks_from_text
+from langchain_community.embeddings import OllamaEmbeddings
+from langchain_community.vectorstores import Chroma
 
-7️⃣ Run the Tutor in Streamlit
+chunks = create_chunks_from_text("ncert_text.txt")
+
+embedding_model = OllamaEmbeddings(
+    model="nomic-embed-text"
+)
+
+vectorstore = Chroma.from_texts(
+    texts=chunks,
+    embedding=embedding_model,
+    persist_directory="./ncert_db_local"
+)
+
+print("Stored documents:", vectorstore._collection.count())
 ```
+
+Exit Python:
+
+```python
+exit()
+```
+
+### 8. Run the application
+
+```bash
 streamlit run streamlit_app.py
 ```
-Open your browser at:
-```
-http://localhost:8501
-```
-Now you can chat with your AI Tutor 🎉
 
+The application will open in your browser.
 
-🧑‍💻 Changing the PDF
-If you want to use another PDF:
-Place your PDF inside the repo folder.
-Update the path in data_ingestion.py:
-```
-pdf_file = "your_new_file.pdf"
-```
-Re-run:
-```
-python data_ingestion.py
-```
-📌 Notes
-The vector DB (ncert_db/) and extracted text (ncert_text.txt) are ignored in GitHub for cleaner repos.
-If you change the PDF, always re-run Step 6 before launching Streamlit.
-Ollama must be running in the background when you start the tutor.
+## Example Questions
 
+- Explain the concept of reflex action.
+- What is the difference between hormones and nervous control?
+- Explain the human nervous system in simple terms.
+- Give me a step-by-step explanation of a concept.
 
-📝 Notes
-To use your own PDFs, place them in the project root and update data_ingestion.py.
-Chroma DB files (ncert_db/) and extracted text (ncert_text.txt) are auto-generated.
-Encourage contributions! Fork the repo and submit pull requests 🎉
+## Current Scope
+
+The current implementation focuses on NCERT-based conversational question answering using a locally hosted language model.
+
+Future improvements could include:
+
+- Support for additional NCERT subjects and chapters.
+- Personalized learning paths.
+- Topic-wise quizzes and assessments.
+- Student progress tracking.
+- Improved conversational memory.
+- A broader collection of NCERT learning resources.
+
+## Acknowledgements
+
+This project builds upon collaborative work from the original [NCERT RAG Bot repository](https://github.com/haris-collab/ncert-rag-bot). Credit and attribution to the original contributors are retained.
+
+## License
+
+No license has currently been specified. Please check the original project's licensing and obtain the necessary permissions before redistributing collaborative code or NCERT-derived materials.
