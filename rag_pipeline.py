@@ -1,3 +1,4 @@
+
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models import ChatOllama
@@ -5,46 +6,79 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 import os
-from chunking import create_chunks_from_text  # Import your chunking function
 
 
 def build_qa_chain():
     """
     Builds and returns the Conversational RAG QA chain.
-    Safe to import into Streamlit or other apps.
+    Uses an existing ChromaDB database instead of
+    recreating embeddings every time the application runs.
     """
-    # 1. Load and chunk the documents
-    text_file = "ncert_text.txt"
+
+    # 1. Locate the project directory
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    # 2. Check whether NCERT text file exists
+    text_file = os.path.join(BASE_DIR, "ncert_text.txt")
+
     if not os.path.exists(text_file):
-        raise FileNotFoundError("Please run data_ingestion.py first to create ncert_text.txt.")
+        raise FileNotFoundError(
+            "NCERT text file not found. Please check ncert_text.txt."
+        )
 
-    chunks = create_chunks_from_text(text_file)
+    # 3. Connect to the embedding model
+    embedding_model = OllamaEmbeddings(
+        model="nomic-embed-text"
+    )
 
-    # 2. Define the embedding model and vector store
-    embedding_model = OllamaEmbeddings(model="nomic-embed-text")
-    vectorstore = Chroma.from_texts(chunks, embedding_model, persist_directory="./ncert_db")
+    # 4. Load the existing ChromaDB database
+    db_path = os.path.join(BASE_DIR, "ncert_db_local")
 
-    # 3. Create a retriever to search the vector store
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(
+            "ChromaDB database not found. Please create ncert_db_local first."
+        )
+
+    vectorstore = Chroma(
+        collection_name="langchain",
+        embedding_function=embedding_model,
+        persist_directory=db_path
+    )
+
+    # 5. Create a retriever
     retriever = vectorstore.as_retriever()
 
-    # 4. Define the LLM and the RAG prompt template
-    llm = ChatOllama(model="phi3-fast")
+    # 6. Connect to the Phi-3 language model
+    llm = ChatOllama(
+        model="phi3-fast"
+    )
 
+    # 7. Define the RAG prompt template
     prompt_template = ChatPromptTemplate.from_template("""
     You are a helpful and personalized AI tutor for a Class 10 student.
 
     Rules for answering:
     - Always answer in **English only**.
-    - Do NOT add phrases like "according to the study material", "the text says", or "from the PDF".
+    - Do NOT add phrases like "according to the study material",
+      "the text says", or "from the PDF".
     - Use simple, clear, step-by-step explanations.
-    - If the student says "I didn't understand", simplify with everyday examples.
-    - If the student says "oh got it", "good job", "thanks", "oh nice", or any similar phrase, reply briefly with encouragement (e.g., "Great! Happy you understood 🎉").
-    - If the student gives feedback but NOT a question, DO NOT explain again — just acknowledge warmly.
-    - Only give detailed explanations if the student actually asks a question.
-    - Be concise and avoid repeating long explanations unless specifically asked.
-    - Focus on the student’s latest input, while remembering the conversation history.
-    - Base your explanation strictly on the "Study material context" below.
-    - Do NOT add outside knowledge unless the student explicitly asks for it.
+    - If the student says "I didn't understand",
+      simplify with everyday examples.
+    - If the student says "oh got it", "good job", "thanks",
+      "oh nice", or any similar phrase, reply briefly with
+      encouragement (e.g., "Great! Happy you understood 🎉").
+    - If the student gives feedback but NOT a question,
+      DO NOT explain again — just acknowledge warmly.
+    - Only give detailed explanations if the student
+      actually asks a question.
+    - Be concise and avoid repeating long explanations
+      unless specifically asked.
+    - Focus on the student's latest input, while remembering
+      the conversation history.
+    - Base your explanation strictly on the
+      "Study material context" below.
+    - Do NOT add outside knowledge unless the student
+      explicitly asks for it.
 
     Conversation so far:
     {chat_history}
@@ -57,35 +91,44 @@ def build_qa_chain():
     AI Tutor (in English):
     """)
 
-    # 5. Setup memory to store chat history
+    # 8. Setup conversation memory
     memory = ConversationBufferMemory(
         memory_key="chat_history",
         return_messages=True
     )
 
-    # 6. Build the Conversational RAG chain
+    # 9. Build the Conversational RAG chain
     qa_chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=retriever,
         memory=memory,
-        combine_docs_chain_kwargs={"prompt": prompt_template}
+        combine_docs_chain_kwargs={
+            "prompt": prompt_template
+        }
     )
 
     return qa_chain
 
 
-# 7. If running directly, start the terminal chatbot
+# 10. Run the chatbot directly from Terminal
 if __name__ == "__main__":
+
     qa_chain = build_qa_chain()
 
-    print("AI Tutor is ready. Ask a question about your Class 10 NCERT book.")
-    print("Type 'exit' to quit.")
+    print("\nAI Tutor is ready!")
+    print("Ask a question about your Class 10 NCERT book.")
+    print("Type 'exit' to quit.\n")
 
     while True:
-        user_question = input("\nStudent: ")
-        if user_question.lower() == 'exit':
+        user_question = input("Student: ")
+
+        if user_question.lower() == "exit":
             print("Goodbye!")
             break
 
-        response = qa_chain.invoke({"question": user_question})
-        print(f"AI Tutor: {response['answer']}")
+        response = qa_chain.invoke({
+            "question": user_question
+        })
+
+        print("\nAI Tutor:", response["answer"])
+        print()
